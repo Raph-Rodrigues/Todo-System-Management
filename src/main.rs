@@ -5,6 +5,7 @@ use std::collections::HashMap;
 struct TodoItem {
     name: String,
     body: String,
+    completed: bool,
 }
 
 impl Default for TodoItem {
@@ -12,17 +13,18 @@ impl Default for TodoItem {
         Self {
             name: "New Todo Item".to_owned(),
             body: String::new(),
+            completed: false,
         }
     }
 }
 
-struct ExampleApp {
+struct App {
     items: HashMap<u32, TodoItem>,
     next_id: u32,
     currently_edited: Option<(u32, TodoItem)>,
 }
 
-impl ExampleApp {
+impl App {
     fn name() -> &'static str {
         "Todo List Manager"
     }
@@ -39,9 +41,15 @@ impl ExampleApp {
     fn save_item(&mut self, id: u32, item: TodoItem) {
         self.items.insert(id, item);
     }
+
+    fn toggle_completion(&mut self, id: u32) {
+        if let Some(item) = self.items.get_mut(&id) {
+            item.completed = !item.completed;
+        }
+    }
 }
 
-impl Default for ExampleApp {
+impl Default for App {
     fn default() -> Self {
         Self {
             items: HashMap::new(),
@@ -51,39 +59,45 @@ impl Default for ExampleApp {
     }
 }
 
-impl eframe::App for ExampleApp {
+impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Todo List");
-            ui.monospace("Click 'Add Item' to add items to the list.");
-            ui.monospace("Click on an item to view, edit, or remove it.");
-            ui.monospace("The item will open in a new window.");
+            ui.heading("Lista de Tarefas");
+            ui.monospace("Clique 'Adicionar Item' para adicionar itens à lista.");
+            ui.monospace("Clique em um item para visualizar, editar ou remover.");
+            ui.monospace("O item abrirá em uma nova janela.");
             ui.separator();
 
             let items = self.items.clone();
 
-            ui.indent("todo_items", |ui| {
-                for (id, item) in items {
+            ui.indent("tarefa", |ui| {
+                for (id, mut item) in items {
                     ui.add_space(5.0);
 
-                    if ui
-                        .add(egui::Label::new(&item.name).sense(egui::Sense::click()))
-                        .clicked()
-                    {
-                        self.currently_edited = Some((id, item));
-                    };
+                    ui.horizontal(|ui| {
+                        if ui.checkbox(&mut item.completed, "").clicked() {
+                            self.toggle_completion(id);
+                        }
+
+                        if ui
+                            .add(egui::Label::new(&item.name).sense(egui::Sense::click()))
+                            .clicked()
+                        {
+                            self.currently_edited = Some((id, item));
+                        };
+                    });
 
                     ui.add_space(5.0);
                 }
             });
 
-            if ui.button("Add Item").clicked() {
+            if ui.button("Adicionar Item").clicked() {
                 self.add_item();
             }
 
             ui.separator();
 
-            if ui.button("Quit").clicked() {
+            if ui.button("Sair").clicked() {
                 std::process::exit(0);
             }
 
@@ -91,7 +105,7 @@ impl eframe::App for ExampleApp {
                 let viewport_id = egui::ViewportId::from_hash_of(format!("edit {id}"));
                 let viewport_builder = egui::ViewportBuilder::default()
                     .with_inner_size((300.0, 300.0))
-                    .with_title(format!("edit {}", item.name));
+                    .with_title(format!("editar {}", item.name));
 
                 let mut should_close = false;
                 let mut should_save = false;
@@ -99,20 +113,21 @@ impl eframe::App for ExampleApp {
 
                 ctx.show_viewport_immediate(viewport_id, viewport_builder, |ctx, _| {
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        ui.label("Name:");
+                        ui.label("Nome:");
                         ui.text_edit_singleline(&mut item.name);
-                        ui.label("Body:");
+                        ui.label("Descrição:");
                         ui.text_edit_multiline(&mut item.body);
+                        ui.checkbox(&mut item.completed, "Concluído");
 
                         ui.horizontal(|ui| {
-                            if ui.button("Save").clicked() {
+                            if ui.button("Salvar").clicked() {
                                 should_save = true;
                                 should_close = true;
                             }
-                            if ui.button("Cancel").clicked() {
+                            if ui.button("Cancelar").clicked() {
                                 should_close = true;
                             }
-                            if ui.button("Remove").clicked() {
+                            if ui.button("Remover").clicked() {
                                 should_remove = true;
                                 should_close = true;
                             }
@@ -139,8 +154,8 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        ExampleApp::name(),
+        App::name(),
         native_options,
-        Box::new(|_| Ok(Box::new(ExampleApp::default()))),
+        Box::new(|_| Ok(Box::new(App::default()))),
     )
 }
