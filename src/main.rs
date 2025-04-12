@@ -70,26 +70,30 @@ impl eframe::App for App {
 
             let items = self.items.clone();
 
-            ui.indent("tarefa", |ui| {
-                for (id, mut item) in items {
-                    ui.add_space(5.0);
+            egui::ScrollArea::vertical()
+                .max_height(400.0)
+                .show(ui, |ui| {
+                    ui.indent("tarefa", |ui| {
+                        for (id, mut item) in items {
+                            ui.add_space(5.0);
 
-                    ui.horizontal(|ui| {
-                        if ui.checkbox(&mut item.completed, "").clicked() {
-                            self.toggle_completion(id);
+                            ui.horizontal(|ui| {
+                                if ui.checkbox(&mut item.completed, "").clicked() {
+                                    self.toggle_completion(id);
+                                }
+
+                                if ui
+                                    .add(egui::Label::new(&item.name).sense(egui::Sense::click()))
+                                    .clicked()
+                                {
+                                    self.currently_edited = Some((id, item));
+                                };
+                            });
+
+                            ui.add_space(5.0);
                         }
-
-                        if ui
-                            .add(egui::Label::new(&item.name).sense(egui::Sense::click()))
-                            .clicked()
-                        {
-                            self.currently_edited = Some((id, item));
-                        };
                     });
-
-                    ui.add_space(5.0);
-                }
-            });
+                });
 
             if ui.button("Adicionar Item").clicked() {
                 self.add_item();
